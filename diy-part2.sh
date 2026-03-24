@@ -18,3 +18,12 @@
 
 # Modify hostname
 #sed -i 's/OpenWrt/P3TERX-Router/g' package/base-files/files/bin/config_generate
+#!/bin/bash
+# 1. 修改默认 IP 为 10.10.10.252
+sed -i 's/192.168.1.1/10.10.10.252/g' package/base-files/files/bin/config_generate
+
+# 2. 修改默认主机名
+sed -i 's/ImmortalWrt/MyOpenWrt/g' package/base-files/files/bin/config_generate
+
+# 3. 移除一些不需要的默认包（可选）
+# sed -i 's/default-settings-chn//g' include/target.mk
