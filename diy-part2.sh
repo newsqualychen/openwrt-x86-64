@@ -27,3 +27,17 @@ sed -i 's/ImmortalWrt/MyOpenWrt/g' package/base-files/files/bin/config_generate
 
 # 3. 移除一些不需要的默认包（可选）
 # sed -i 's/default-settings-chn//g' include/target.mk
+# 修改默认 Banner (登录时的字符画)
+echo "
+                      _   _                    _   
+ _ __ ___   __ _ _ __| |_(_)_ ____      ___ __| |_ 
+| '_ ` _ \ / _` | '__| __| | '_ \ \ /\ / / '__| __|
+| | | | | | (_| | |  | |_| | | | \ V  V /| |  | |_ 
+|_| |_| |_|\__,_|_|   \__|_|_| |_|\_/\_/ |_|   \__|
+                                                                                                                  
+             --- Martin Custom Edition ---
+" > package/base-files/files/etc/banner
+# 将主机名从 ImmortalWrt 改为 MyRouter
+sed -i 's/ImmortalWrt/MartinlWrt/g' package/base-files/files/bin/config_generate
+# 在版本号后面加上你的专属后缀
+sed -i "s/OpenWrt /Built by MartinlWrt /g" package/base-files/files/etc/openwrt_release
