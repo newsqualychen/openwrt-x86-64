@@ -53,7 +53,7 @@ sed -i 's/ImmortalWrt/SqualyWrt/g' feeds/luci/modules/luci-base/luasrc/controlle
 sed -i 's/OpenWrt/SqualyWrt/g' feeds/luci/modules/luci-base/luasrc/controller/admin/index.lua 2>/dev/null || true
 
 # 如果你的 config 里还勾选了 luci-theme-material，也可以顺便改一下（保险起见）
-find feeds/luci -name "header.htm" -path "*/themes/material/*" -exec sed -i 's/ImmortalWrt/SqualyWrt/g' {} + 2>/dev/null || true
-find feeds/luci -name "header.htm" -path "*/themes/material/*" -exec sed -i 's/OpenWrt/SqualyWrt/g' {} + 2>/dev/null || true
+# find feeds/luci -name "header.htm" -path "*/themes/material/*" -exec sed -i 's/ImmortalWrt/SqualyWrt/g' {} + 2>/dev/null || true
+# find feeds/luci -name "header.htm" -path "*/themes/material/*" -exec sed -i 's/OpenWrt/SqualyWrt/g' {} + 2>/dev/null || true
 
 echo "=== diy-part2.sh 执行完成：默认 IP、主机名、Banner、Bootstrap 默认主题 Web Logo & Footer 已修改 ==="
