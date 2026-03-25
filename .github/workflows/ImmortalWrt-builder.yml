@@ -1,16 +1,11 @@
 #
 # https://github.com/P3TERX/Actions-OpenWrt
 #
-# File: .github/workflows/openwrt-bulder.yml
+# File: .github/workflows/openwrt-builder.yml
 # Description: Build OpenWrt using GitHub Actions
 #
-# Copyright (c) 2019-2024 P3TERX <https://p3terx.com>
-#
-# This is free software, licensed under the MIT License.
-# See /LICENSE for more information.
-#
 
-name: ImmortalWrt-builder
+name: ImmortalWrt x86-64 Builder   # ← 修改：让 Actions 页面显示更清晰
 
 on:
   repository_dispatch:
@@ -18,7 +13,7 @@ on:
 
 env:
   REPO_URL: https://github.com/immortalwrt/immortalwrt
-  REPO_BRANCH: master
+  REPO_BRANCH: master          # ← 如果你想用 24.10 分支，改成 24.10
   FEEDS_CONF: feeds.conf.default
   CONFIG_FILE: .config
   DIY_P1_SH: diy-part1.sh
@@ -30,7 +25,13 @@ env:
 
 jobs:
   build:
-    runs-on: ubuntu-22.04
+    # ========== 关键修改1：使用更大规格的 runner（推荐）==========
+    # 如果你 GitHub 有 Pro/Team/Enterprise 权限，可以直接用 ubuntu-22.04-16core
+    # 免费用户若无法使用 larger runner，请先改回 ubuntu-22.04 并重点靠下面的 Swap
+    runs-on: ubuntu-22.04-16core     # ← 修改这里（推荐）
+    # runs-on: ubuntu-22.04          # ← 如果 larger runner 不可用，改回这行
+
+    timeout-minutes: 480             # ← 新增：给 8 小时，避免 GitHub 强制中断
 
     steps:
     - name: Checkout
@@ -49,6 +50,29 @@ jobs:
         sudo timedatectl set-timezone "$TZ"
         sudo mkdir -p /workdir
         sudo chown $USER:$GROUPS /workdir
+
+    # ========== 关键修改2：增加 Swap（防 OOM）==========
+    - name: Setup Swap (16GB) to prevent OOM
+      run: |
+        sudo fallocate -l 16G /swapfile
+        sudo chmod 600 /swapfile
+        sudo mkswap /swapfile
+        sudo swapon /swapfile
+        echo '/swapfile none swap sw 0 0' | sudo tee -a /etc/fstab
+        free -h
+
+    # ========== 关键修改3：添加缓存（大幅省时间和内存）==========
+    - name: Cache OpenWrt build files
+      uses: actions/cache@v4
+      with:
+        path: |
+          /workdir/openwrt/dl
+          /workdir/openwrt/ccache
+          /workdir/openwrt/staging_dir
+          /workdir/openwrt/build_dir
+        key: ${{ runner.os }}-immortalwrt-${{ hashFiles('.config') }}
+        restore-keys: |
+          ${{ runner.os }}-immortalwrt-
 
     - name: Clone source code
       working-directory: /workdir
@@ -84,15 +108,13 @@ jobs:
         cd openwrt
         make defconfig
         make download -j8
-        find dl -size -1024c -exec ls -l {} \;
-        find dl -size -1024c -exec rm -f {} \;
 
     - name: Compile the firmware
       id: compile
       run: |
         cd openwrt
-        echo -e "$(nproc) thread compile"
-        make -j$(nproc) || make -j1 || make -j1 V=s
+        echo "Using 4~6 threads to avoid OOM"
+        make -j4 || make -j2 || make -j1 V=s     # ← 修改：限制线程数，防 OOM
         echo "status=success" >> $GITHUB_OUTPUT
         grep '^CONFIG_TARGET.*DEVICE.*=y' .config | sed -r 's/.*DEVICE_(.*)=y/\1/' > DEVICE_NAME
         [ -s DEVICE_NAME ] && echo "DEVICE_NAME=_$(cat DEVICE_NAME)" >> $GITHUB_ENV
@@ -102,6 +124,7 @@ jobs:
       if: (!cancelled())
       run: df -hT
 
+    # 后面 Upload 部分保持不变（可根据需要微调）
     - name: Upload bin directory
       uses: actions/upload-artifact@main
       if: steps.compile.outputs.status == 'success' && env.UPLOAD_BIN_DIR == 'true'
@@ -131,7 +154,6 @@ jobs:
       run: |
         echo "release_tag=$(date +"%Y.%m.%d-%H%M")" >> $GITHUB_OUTPUT
         touch release.txt
-        [ ${UPLOAD_GOFILE} = true && ${{ steps.gofile.outputs.url }} ] && echo "🔗 [GoFile](${{ steps.gofile.outputs.url }})" >> release.txt
         echo "status=success" >> $GITHUB_OUTPUT
 
     - name: Upload firmware to release
@@ -144,7 +166,7 @@ jobs:
         body_path: release.txt
         files: ${{ env.FIRMWARE }}/*
 
-    - name: Delete workflow runs
+    - name: Delete old workflow runs
       uses: Mattraks/delete-workflow-runs@main
       with:
         retain_days: 0
